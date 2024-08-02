@@ -26,8 +26,7 @@ Resources:
     Type: "AWS::Cognito::UserPoolClient"
     Properties:
       ClientName: "job-matching-app-client"
-      UserPoolId:
-        Ref: CognitoUserPool
+      UserPoolId: !Ref CognitoUserPool
       GenerateSecret: false
       ExplicitAuthFlows:
         - ALLOW_REFRESH_TOKEN_AUTH
@@ -35,49 +34,47 @@ Resources:
       SupportedIdentityProviders:
         - COGNITO
 
-  ElasticBeanstalkApplication:
-    Type: "AWS::ElasticBeanstalk::Application"
+  InstanceSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
     Properties:
-      ApplicationName: "job-matching-app"
+      GroupDescription: "Enable SSH access and HTTP access"
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
 
-  ElasticBeanstalkApplicationVersion:
-    Type: "AWS::ElasticBeanstalk::ApplicationVersion"
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
     Properties:
-      ApplicationName: !Ref ElasticBeanstalkApplication
-      Description: "Version 1.0"
-      SourceBundle:
-        S3Bucket: "job-matching-app-bucket"
-        S3Key: "Dockerrun.aws.json"
-
-  ElasticBeanstalkEnvironment:
-    Type: "AWS::ElasticBeanstalk::Environment"
-    Properties:
-      ApplicationName: !Ref ElasticBeanstalkApplication
-      EnvironmentName: "job-matching-app-env"
-      SolutionStackName: "64bit Amazon Linux 2023 v4.3.5 running Docker"
-      VersionLabel: !Ref ElasticBeanstalkApplicationVersion
-      OptionSettings:
-        - Namespace: "aws:autoscaling:launchconfiguration"
-          OptionName: "InstanceType"
-          Value: "t2.micro"
-        - Namespace: "aws:elasticbeanstalk:environment"
-          OptionName: "EnvironmentType"
-          Value: "SingleInstance"
-        - Namespace: "aws:elasticbeanstalk:environment"
-          OptionName: "ServiceRole"
-          Value: "arn:aws:iam::700690205031:role/LabRole"
-        - Namespace: "aws:autoscaling:launchconfiguration"
-          OptionName: "EC2KeyName"
-          Value: "vockey"
-        - Namespace: "aws:autoscaling:launchconfiguration"
-          OptionName: "IamInstanceProfile"
-          Value: "LabInstanceProfile"
-        - Namespace: "aws:elasticbeanstalk:application:environment"
-          OptionName: "VITE_USER_POOL_ID"
-          Value: !Ref CognitoUserPool
-        - Namespace: "aws:elasticbeanstalk:application:environment"
-          OptionName: "VITE_USER_POOL_CLIENT_ID"
-          Value: !Ref CognitoUserPoolClient
+      InstanceType: "t2.micro"
+      KeyName: "ta-key"
+      IamInstanceProfile: "LabInstanceProfile"
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      ImageId: "ami-0ba9883b710b05ac6"
+      Tags:
+        - Key: "Name"
+          Value: "JobMatchingAppInstance"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install docker -y
+          systemctl start docker
+          systemctl enable docker
+          usermod -a -G docker ec2-user
+          yum install git -y
+          mkdir -p /home/ec2-user/term-assignment
+          cd /home/ec2-user/term-assignment
+          git clone https://github.com/ChristinSaji/job-matching-app.git
+          cd job-matching-app/job-matching-app
+          docker build --build-arg VITE_USER_POOL_ID=${CognitoUserPool} --build-arg VITE_USER_POOL_CLIENT_ID=${CognitoUserPoolClient} -t christinsaji/job-matching-app:latest .
+          docker run -p 80:80 christinsaji/job-matching-app:latest
 
 Outputs:
   UserPoolId:
@@ -92,6 +89,14 @@ Outputs:
     Export:
       Name: "UserPoolClientId"
 
-  EnvironmentURL:
-    Description: "URL of the Elastic Beanstalk environment"
-    Value: !GetAtt ElasticBeanstalkEnvironment.EndpointURL
+  InstanceId:
+    Description: "ID of the EC2 instance"
+    Value: !Ref EC2Instance
+    Export:
+      Name: "InstanceId"
+
+  InstancePublicIP:
+    Description: "Public IP address of the EC2 instance"
+    Value: !GetAtt EC2Instance.PublicIp
+    Export:
+      Name: "InstancePublicIP"
