@@ -76,6 +76,38 @@ Resources:
           docker build --build-arg VITE_USER_POOL_ID=${CognitoUserPool} --build-arg VITE_USER_POOL_CLIENT_ID=${CognitoUserPoolClient} -t christinsaji/job-matching-app:latest .
           docker run -p 80:80 christinsaji/job-matching-app:latest
 
+  JobApplicationsTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: "JobApplications"
+      AttributeDefinitions:
+        - AttributeName: "userId"
+          AttributeType: "S"
+        - AttributeName: "applicationId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "userId"
+          KeyType: "HASH"
+        - AttributeName: "applicationId"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  ExtractedTextTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: "ExtractedText"
+      AttributeDefinitions:
+        - AttributeName: "applicationId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "applicationId"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
 Outputs:
   UserPoolId:
     Description: "Cognito User Pool ID"
@@ -100,3 +132,11 @@ Outputs:
     Value: !GetAtt EC2Instance.PublicIp
     Export:
       Name: "InstancePublicIP"
+
+  JobApplicationsTableName:
+    Description: "DynamoDB Job Applications Table Name"
+    Value: !Ref JobApplicationsTable
+
+  ExtractedTextTableName:
+    Description: "DynamoDB Extracted Text Table Name"
+    Value: !Ref ExtractedTextTable
