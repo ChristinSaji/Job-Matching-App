@@ -1,5 +1,16 @@
 import React, { useState } from "react";
 import Navbar from "./Navbar";
+import UserPool from "../userpool";
+import Notification from "./Notification";
+
+// Code Source: https://stackoverflow.com/questions/36280818/how-to-convert-file-to-base64-in-javascript
+const toBase64 = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+  });
 
 function Dashboard() {
   const [companyName, setCompanyName] = useState("");
@@ -7,13 +18,82 @@ function Dashboard() {
   const [jobDescription, setJobDescription] = useState("");
   const [resume, setResume] = useState(null);
   const [matchingScore, setMatchingScore] = useState(null);
+  const [notification, setNotification] = useState(null);
 
   const handleResumeUpload = (e) => {
     setResume(e.target.files[0]);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const user = UserPool.getCurrentUser();
+    if (!user) {
+      setNotification({ message: "User is not authenticated.", type: "error" });
+      return;
+    }
+
+    user.getSession(async (err, session) => {
+      if (err) {
+        setNotification({
+          message: "Failed to get user session.",
+          type: "error",
+        });
+        return;
+      }
+
+      const idToken = session.getIdToken().getJwtToken();
+
+      const resumeBase64 = await toBase64(resume);
+
+      const formData = {
+        companyName,
+        jobTitle,
+        jobDescription,
+        resume: {
+          filename: resume.name,
+          content: resumeBase64,
+          contentType: resume.type,
+        },
+      };
+
+      try {
+        const response = await fetch(
+          "https://xxeylhpora.execute-api.us-east-1.amazonaws.com/dev/applications",
+          {
+            method: "POST",
+            body: JSON.stringify(formData),
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: idToken,
+            },
+          }
+        );
+
+        const data = await response.json();
+        if (response.ok) {
+          setMatchingScore(data.matchingScore);
+          setNotification({
+            message: "Application submitted successfully!",
+            type: "success",
+          });
+        } else {
+          setNotification({
+            message: data.error || "Failed to submit job application.",
+            type: "error",
+          });
+        }
+      } catch (error) {
+        setNotification({
+          message: "An error occurred while submitting the job application.",
+          type: "error",
+        });
+      }
+    });
+  };
+
+  const closeNotification = () => {
+    setNotification(null);
   };
 
   return (
@@ -24,6 +104,13 @@ function Dashboard() {
           <h1 className="text-3xl font-bold text-center text-indigo-800">
             Job Match
           </h1>
+          {notification && (
+            <Notification
+              message={notification.message}
+              type={notification.type}
+              onClose={closeNotification}
+            />
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1">
               <label
