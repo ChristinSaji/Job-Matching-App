@@ -75,19 +75,22 @@ Resources:
   JobApplicationLambdaFunction:
     Type: "AWS::Lambda::Function"
     Properties:
-      FunctionName: "JobApplications"
+      FunctionName: "JobApplication"
       Handler: "index.handler"
       Role: "arn:aws:iam::700690205031:role/LabRole"
       Runtime: "nodejs20.x"
       Code:
         S3Bucket: "job-matching-app-bucket"
-        S3Key: "JobApplications.zip"
+        S3Key: "JobApplication.zip"
 
   JobMatchingAPI:
     Type: "AWS::ApiGateway::RestApi"
     Properties:
       Name: "JobMatchingAPI"
       Description: "API for job matching application"
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
 
   JobMatchingAPIResource:
     Type: "AWS::ApiGateway::Resource"
@@ -96,7 +99,7 @@ Resources:
       PathPart: "applications"
       RestApiId: !Ref JobMatchingAPI
 
-  JobMatchingAPIMethod:
+  JobMatchingAPIPOSTMethod:
     Type: "AWS::ApiGateway::Method"
     Properties:
       AuthorizationType: "COGNITO_USER_POOLS"
@@ -111,6 +114,36 @@ Resources:
           - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
           - { LambdaArn: !GetAtt JobApplicationLambdaFunction.Arn }
 
+  # Script Source: https://stackoverflow.com/questions/40292888/enable-cors-for-api-gateway-in-cloudformation-template#comment81922689_40322991
+  JobMatchingAPIOPTIONSMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      RestApiId: !Ref JobMatchingAPI
+      ResourceId: !Ref JobMatchingAPIResource
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: "{}"
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: "Empty"
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
   CognitoUserPoolAuthorizer:
     Type: "AWS::ApiGateway::Authorizer"
     Properties:
@@ -120,6 +153,15 @@ Resources:
       ProviderARNs:
         - !GetAtt CognitoUserPool.Arn
       IdentitySource: "method.request.header.Authorization"
+
+  JobMatchingAPIDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    Properties:
+      RestApiId: !Ref JobMatchingAPI
+      StageName: prod
+    DependsOn:
+      - JobMatchingAPIPOSTMethod
+      - JobMatchingAPIOPTIONSMethod
 
   LambdaInvokePermission:
     Type: "AWS::Lambda::Permission"
@@ -170,7 +212,7 @@ Resources:
           cd job-matching-app/job-matching-app
           docker build --build-arg VITE_USER_POOL_ID=${CognitoUserPool} --build-arg VITE_USER_POOL_CLIENT_ID=${CognitoUserPoolClient} --build-arg VITE_API_URL=https://${JobMatchingAPI}.execute-api.${AWS::Region}.amazonaws.com/prod -t christinsaji/job-matching-app:latest .
           docker run -p 80:80 christinsaji/job-matching-app:latest
-    DependsOn: JobMatchingAPI
+    DependsOn: JobMatchingAPIDeployment
 
 Outputs:
   UserPoolId:
