@@ -82,6 +82,10 @@ Resources:
       Code:
         S3Bucket: "job-matching-app-bucket"
         S3Key: "JobApplication.zip"
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref ResumesBucket
+          APPLICATIONS_TABLE: !Ref JobApplicationsTable
 
   JobMatchingAPI:
     Type: "AWS::ApiGateway::RestApi"
