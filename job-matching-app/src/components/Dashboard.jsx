@@ -59,7 +59,7 @@ function Dashboard() {
 
       try {
         const response = await fetch(
-          "https://xxeylhpora.execute-api.us-east-1.amazonaws.com/dev/applications",
+          `${import.meta.env.VITE_API_URL}/applications`,
           {
             method: "POST",
             body: JSON.stringify(formData),

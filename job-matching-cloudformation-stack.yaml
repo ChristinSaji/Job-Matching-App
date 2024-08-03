@@ -34,6 +34,101 @@ Resources:
       SupportedIdentityProviders:
         - COGNITO
 
+  JobApplicationsTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: "JobApplications"
+      AttributeDefinitions:
+        - AttributeName: "userId"
+          AttributeType: "S"
+        - AttributeName: "applicationId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "userId"
+          KeyType: "HASH"
+        - AttributeName: "applicationId"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  ExtractedTextTable:
+    Type: "AWS::DynamoDB::Table"
+    Properties:
+      TableName: "ExtractedText"
+      AttributeDefinitions:
+        - AttributeName: "applicationId"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "applicationId"
+          KeyType: "HASH"
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  ResumesBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: "job-matching-app-resumes"
+      AccessControl: "Private"
+
+  JobApplicationLambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      FunctionName: "JobApplications"
+      Handler: "index.handler"
+      Role: "arn:aws:iam::700690205031:role/LabRole"
+      Runtime: "nodejs20.x"
+      Code:
+        S3Bucket: "job-matching-app-bucket"
+        S3Key: "JobApplications.zip"
+
+  JobMatchingAPI:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: "JobMatchingAPI"
+      Description: "API for job matching application"
+
+  JobMatchingAPIResource:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      ParentId: !GetAtt JobMatchingAPI.RootResourceId
+      PathPart: "applications"
+      RestApiId: !Ref JobMatchingAPI
+
+  JobMatchingAPIMethod:
+    Type: "AWS::ApiGateway::Method"
+    Properties:
+      AuthorizationType: "COGNITO_USER_POOLS"
+      AuthorizerId: !Ref CognitoUserPoolAuthorizer
+      HttpMethod: "POST"
+      ResourceId: !Ref JobMatchingAPIResource
+      RestApiId: !Ref JobMatchingAPI
+      Integration:
+        IntegrationHttpMethod: "POST"
+        Type: "AWS_PROXY"
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
+          - { LambdaArn: !GetAtt JobApplicationLambdaFunction.Arn }
+
+  CognitoUserPoolAuthorizer:
+    Type: "AWS::ApiGateway::Authorizer"
+    Properties:
+      Name: "CognitoAuthorizer"
+      RestApiId: !Ref JobMatchingAPI
+      Type: "COGNITO_USER_POOLS"
+      ProviderARNs:
+        - !GetAtt CognitoUserPool.Arn
+      IdentitySource: "method.request.header.Authorization"
+
+  LambdaInvokePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      FunctionName: !GetAtt JobApplicationLambdaFunction.Arn
+      Action: "lambda:InvokeFunction"
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${JobMatchingAPI}/*/*"
+
   InstanceSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -73,40 +168,9 @@ Resources:
           cd /home/ec2-user/term-assignment
           git clone https://github.com/ChristinSaji/job-matching-app.git
           cd job-matching-app/job-matching-app
-          docker build --build-arg VITE_USER_POOL_ID=${CognitoUserPool} --build-arg VITE_USER_POOL_CLIENT_ID=${CognitoUserPoolClient} -t christinsaji/job-matching-app:latest .
+          docker build --build-arg VITE_USER_POOL_ID=${CognitoUserPool} --build-arg VITE_USER_POOL_CLIENT_ID=${CognitoUserPoolClient} --build-arg VITE_API_URL=https://${JobMatchingAPI}.execute-api.${AWS::Region}.amazonaws.com/prod -t christinsaji/job-matching-app:latest .
           docker run -p 80:80 christinsaji/job-matching-app:latest
-
-  JobApplicationsTable:
-    Type: "AWS::DynamoDB::Table"
-    Properties:
-      TableName: "JobApplications"
-      AttributeDefinitions:
-        - AttributeName: "userId"
-          AttributeType: "S"
-        - AttributeName: "applicationId"
-          AttributeType: "S"
-      KeySchema:
-        - AttributeName: "userId"
-          KeyType: "HASH"
-        - AttributeName: "applicationId"
-          KeyType: "RANGE"
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
-
-  ExtractedTextTable:
-    Type: "AWS::DynamoDB::Table"
-    Properties:
-      TableName: "ExtractedText"
-      AttributeDefinitions:
-        - AttributeName: "applicationId"
-          AttributeType: "S"
-      KeySchema:
-        - AttributeName: "applicationId"
-          KeyType: "HASH"
-      ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+    DependsOn: JobMatchingAPI
 
 Outputs:
   UserPoolId:
@@ -140,3 +204,9 @@ Outputs:
   ExtractedTextTableName:
     Description: "DynamoDB Extracted Text Table Name"
     Value: !Ref ExtractedTextTable
+
+  ApiGatewayEndpoint:
+    Description: "API Gateway Endpoint"
+    Value: !Sub "https://${JobMatchingAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Export:
+      Name: "ApiGatewayEndpoint"
