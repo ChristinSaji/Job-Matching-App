@@ -160,7 +160,7 @@ Resources:
       ResourceId: !Ref JobMatchingAPIResource
       RestApiId: !Ref JobMatchingAPI
       Integration:
-        IntegrationHttpMethod: "GET"
+        IntegrationHttpMethod: "POST"
         Type: "AWS_PROXY"
         Uri: !Sub
           - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
@@ -215,6 +215,49 @@ Resources:
       - JobMatchingAPIPOSTMethod
       - JobMatchingAPIGETMethod
       - JobMatchingAPIOPTIONSMethod
+
+  InstanceSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "Enable SSH access and HTTP access"
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"
+        - IpProtocol: "tcp"
+          FromPort: "80"
+          ToPort: "80"
+          CidrIp: "0.0.0.0/0"
+
+  EC2Instance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      InstanceType: "t2.micro"
+      KeyName: "ta-key"
+      IamInstanceProfile: "LabInstanceProfile"
+      SecurityGroups:
+        - !Ref InstanceSecurityGroup
+      ImageId: "ami-0ba9883b710b05ac6"
+      Tags:
+        - Key: "Name"
+          Value: "JobMatchingAppInstance"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install docker -y
+          systemctl start docker
+          systemctl enable docker
+          usermod -a -G docker ec2-user
+          yum install git -y
+          mkdir -p /home/ec2-user/term-assignment
+          cd /home/ec2-user/term-assignment
+          git clone https://github.com/ChristinSaji/job-matching-app.git
+          cd job-matching-app/job-matching-app
+          docker build --build-arg VITE_USER_POOL_ID=${CognitoUserPool} --build-arg VITE_USER_POOL_CLIENT_ID=${CognitoUserPoolClient} --build-arg VITE_API_URL=https://${JobMatchingAPI}.execute-api.${AWS::Region}.amazonaws.com/prod -t christinsaji/job-matching-app:latest .
+          docker run -p 80:80 christinsaji/job-matching-app:latest
+    DependsOn: JobMatchingAPIDeployment
 
 Outputs:
   UserPoolId:
