@@ -72,51 +72,30 @@ Resources:
       BucketName: "job-matching-app-resumes"
       AccessControl: "Private"
 
-  JobApplicationLambdaFunction:
+  CalculateScoreLambdaFunction:
     Type: "AWS::Lambda::Function"
     Properties:
-      FunctionName: "JobApplication"
-      Handler: "index.handler"
-      Role: "arn:aws:iam::700690205031:role/LabRole"
-      Runtime: "nodejs20.x"
-      Code:
-        S3Bucket: "job-matching-app-bucket"
-        S3Key: "JobApplication.zip"
-      Environment:
-        Variables:
-          BUCKET_NAME: !Ref ResumesBucket
-          APPLICATIONS_TABLE: !Ref JobApplicationsTable
-
-  TextExtractionLambdaFunction:
-    Type: "AWS::Lambda::Function"
-    Properties:
-      FunctionName: "TextExtraction"
+      FunctionName: "CalculateScore"
       Handler: "index.handler"
       Role: "arn:aws:iam::700690205031:role/LabRole"
       Runtime: "nodejs20.x"
       Timeout: 60
       Code:
         S3Bucket: "job-matching-app-bucket"
-        S3Key: "TextExtraction.zip"
+        S3Key: "CalculateScore.zip"
       Environment:
         Variables:
+          BUCKET_NAME: !Ref ResumesBucket
+          APPLICATIONS_TABLE: !Ref JobApplicationsTable
           EXTRACTED_TEXT_TABLE: !Ref ExtractedTextTable
 
-  LambdaInvokePermissionJobApplication:
+  LambdaInvokePermissionCalculateScore:
     Type: "AWS::Lambda::Permission"
     Properties:
-      FunctionName: !GetAtt JobApplicationLambdaFunction.Arn
+      FunctionName: !GetAtt CalculateScoreLambdaFunction.Arn
       Action: "lambda:InvokeFunction"
       Principal: "apigateway.amazonaws.com"
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${JobMatchingAPI}/*/*"
-
-  LambdaInvokePermissionTextExtraction:
-    Type: "AWS::Lambda::Permission"
-    Properties:
-      FunctionName: !GetAtt TextExtractionLambdaFunction.Arn
-      Action: "lambda:InvokeFunction"
-      Principal: "s3.amazonaws.com"
-      SourceArn: !Sub "arn:aws:s3:::${ResumesBucket}/*"
 
   JobMatchingAPI:
     Type: "AWS::ApiGateway::RestApi"
@@ -147,7 +126,7 @@ Resources:
         Type: "AWS_PROXY"
         Uri: !Sub
           - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${LambdaArn}/invocations
-          - { LambdaArn: !GetAtt JobApplicationLambdaFunction.Arn }
+          - { LambdaArn: !GetAtt CalculateScoreLambdaFunction.Arn }
 
   # Script Source: https://stackoverflow.com/questions/40292888/enable-cors-for-api-gateway-in-cloudformation-template#comment81922689_40322991
   JobMatchingAPIOPTIONSMethod:
