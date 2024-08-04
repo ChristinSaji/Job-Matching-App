@@ -103,14 +103,7 @@ function History() {
                         {entry.jobTitle}
                       </td>
                       <td className="border border-indigo-800 px-4 py-2">
-                        <a
-                          href={entry.resumeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-indigo-800 underline"
-                        >
-                          {entry.resumeKey.split("/").pop()}
-                        </a>
+                        {entry.resumeFileName}
                       </td>
                       <td className="border border-indigo-800 px-4 py-2">
                         {entry.matchingScore}

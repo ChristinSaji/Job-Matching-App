@@ -89,7 +89,7 @@ Resources:
           APPLICATIONS_TABLE: !Ref JobApplicationsTable
           EXTRACTED_TEXT_TABLE: !Ref ExtractedTextTable
 
-  G GetHistoryLambdaFunction:
+  GetHistoryLambdaFunction:
     Type: "AWS::Lambda::Function"
     Properties:
       FunctionName: "GetHistory"
