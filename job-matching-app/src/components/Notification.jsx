@@ -3,17 +3,15 @@ import React from "react";
 function Notification({ message, type, onClose }) {
   return (
     <div
-      className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${
-        type === "success"
-          ? "bg-indigo-800 text-white"
-          : "bg-red-800 text-white"
+      className={`fixed bottom-4 right-4 z-50 p-4 rounded-md shadow-lg ${
+        type === "success" ? "bg-primary text-white" : "bg-accent text-white"
       }`}
     >
       <div className="flex justify-between items-center">
         <span>{message}</span>
         <button
           onClick={onClose}
-          className="ml-4 text-white hover:text-gray-300"
+          className="ml-4 text-white text-xl font-black hover:text-gray-400"
         >
           &times;
         </button>

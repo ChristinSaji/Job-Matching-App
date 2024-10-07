@@ -77,11 +77,11 @@ Resources:
     Properties:
       FunctionName: "CalculateScore"
       Handler: "index.handler"
-      Role: "arn:aws:iam::700690205031:role/LabRole"
+      Role: "arn:aws:iam::095276585962:role/LabRole"
       Runtime: "nodejs20.x"
       Timeout: 60
       Code:
-        S3Bucket: "job-matching-app-bucket"
+        S3Bucket: "job-matching-appl-bucket"
         S3Key: "CalculateScore.zip"
       Environment:
         Variables:
@@ -94,10 +94,10 @@ Resources:
     Properties:
       FunctionName: "GetHistory"
       Handler: "index.handler"
-      Role: "arn:aws:iam::700690205031:role/LabRole"
+      Role: "arn:aws:iam::095276585962:role/LabRole"
       Runtime: "nodejs20.x"
       Code:
-        S3Bucket: "job-matching-app-bucket"
+        S3Bucket: "job-matching-appl-bucket"
         S3Key: "GetHistory.zip"
       Environment:
         Variables:
