@@ -17,19 +17,10 @@ function Dashboard() {
   const [jobDescription, setJobDescription] = useState("");
   const [resume, setResume] = useState(null);
   const [matchingScore, setMatchingScore] = useState(null);
-  const [previousScore, setPreviousScore] = useState(null);
   const [unmatchedWords, setUnmatchedWords] = useState([]);
   const [notification, setNotification] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Effect to get previous score from localStorage when the component mounts
-  useEffect(() => {
-    const previousData = localStorage.getItem(`${companyName}-${jobTitle}`);
-    if (previousData) {
-      setPreviousScore(JSON.parse(previousData).matchingScore);
-    }
-  }, [companyName, jobTitle]);
 
   const handleResumeUpload = (e) => {
     const file = e.target.files[0];
@@ -111,20 +102,6 @@ function Dashboard() {
             message: "Application submitted successfully!",
             type: "success",
           });
-
-          // Save the current result in localStorage
-          const currentData = {
-            companyName,
-            jobTitle,
-            matchingScore: data.matchingScore,
-          };
-          localStorage.setItem(
-            `${companyName}-${jobTitle}`,
-            JSON.stringify(currentData)
-          );
-
-          // Update the previous score for comparison
-          setPreviousScore(data.matchingScore);
         } else {
           setNotification({
             message: data.error || "Failed to submit job application.",
@@ -143,16 +120,6 @@ function Dashboard() {
 
   const closeNotification = () => {
     setNotification(null);
-  };
-
-  const getScoreIcon = (currentScore, previousScore) => {
-    if (currentScore > previousScore) {
-      return <span className="text-green-500">▲</span>;
-    } else if (currentScore < previousScore) {
-      return <span className="text-red-500">▼</span>;
-    } else {
-      return <span className="text-gray-500">=</span>;
-    }
   };
 
   return (
@@ -327,11 +294,6 @@ function Dashboard() {
           <div className="mt-4">
             <h2 className="my-5 text-2xl font-bold text-center text-primary">
               Matching Score: {matchingScore}
-              {previousScore !== null && (
-                <span className="ml-2">
-                  {getScoreIcon(matchingScore, previousScore)}
-                </span>
-              )}
             </h2>
 
             <div className="mt-4 py-6 bg-secondary">
