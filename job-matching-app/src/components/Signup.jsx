@@ -32,11 +32,9 @@ function Signup() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-950">
-      <div className="w-full max-w-md p-8 space-y-3 rounded-xl bg-white shadow-lg">
-        <h1 className="text-3xl font-bold text-center text-indigo-800">
-          Signup
-        </h1>
+    <div className="flex items-center justify-center min-h-screen bg-primary-dark">
+      <div className="w-full max-w-md p-8 space-y-3 rounded-xl bg-secondary shadow-lg">
+        <h1 className="text-3xl font-bold text-center text-primary">Signup</h1>
         {notification && (
           <Notification
             message={notification.message}
@@ -46,10 +44,7 @@ function Signup() {
         )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-1">
-            <label
-              htmlFor="email"
-              className="block font-medium text-indigo-800"
-            >
+            <label htmlFor="email" className="block font-medium text-primary">
               Email
             </label>
             <input
@@ -57,14 +52,14 @@ function Signup() {
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md ring-1 ring-indigo-800 focus:outline-none focus:ring focus:ring-indigo-800"
+              className="w-full px-4 py-2 border rounded-md ring-1 ring-primary focus:outline-none focus:ring focus:ring-primary"
               required
             />
           </div>
           <div className="space-y-1">
             <label
               htmlFor="password"
-              className="block font-medium text-indigo-800"
+              className="block font-medium text-primary"
             >
               Password
             </label>
@@ -73,20 +68,20 @@ function Signup() {
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md ring-1 ring-indigo-800 focus:outline-none focus:ring focus:ring-indigo-800"
+              className="w-full px-4 py-2 border rounded-md ring-1 ring-primary focus:outline-none focus:ring focus:ring-primary"
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full py-2 px-4 text-white font-semibold bg-indigo-800 rounded-md hover:bg-indigo-900 focus:outline-none"
+            className="w-full py-2 px-4 text-secondary font-semibold bg-primary rounded-md hover:bg-primary-dark focus:outline-none"
           >
             Signup
           </button>
         </form>
         <p className="text-center">
           Already have an account?{" "}
-          <Link to="/login" className="text-indigo-800">
+          <Link to="/login" className="text-primary">
             Login
           </Link>
         </p>
